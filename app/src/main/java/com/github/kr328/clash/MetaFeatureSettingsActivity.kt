@@ -108,16 +108,21 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
                 .map { it.trim() }
                 .filter { it.startsWith("zivpn://") }
 
+            val current = store.zivpnAccounts.toMutableList()
             var count = 0
             lines.forEach { line ->
                 val content = line.substringAfter("zivpn://")
                 val parts = content.split("@")
                 if (parts.size == 2) {
+                    if (!current.contains(line)) {
+                        current.add(line)
+                    }
                     store.zivpnServerHost = parts[0]
                     store.zivpnAuthUser = parts[1]
                     count++
                 }
             }
+            store.zivpnAccounts = current
 
             if (count > 0) {
                 Toast.makeText(this, "Imported $count accounts", Toast.LENGTH_SHORT).show()

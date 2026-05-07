@@ -29,12 +29,26 @@ class ZivpnManager(private val context: Context) {
         val serverPorts = "6000-7750,7751-9500,9501-11225,11251-13000,13001-14750,14751-16500,16501-18250,18251-19999"
         val tunnels = mutableListOf<String>()
 
+        var host = store.zivpnServerHost
+        var auth = store.zivpnAuthUser
+
+        val accounts = store.zivpnAccounts
+        val selected = store.zivpnSelectedAccount
+        if (selected >= 0 && selected < accounts.size) {
+            val content = accounts[selected].substringAfter("zivpn://")
+            val parts = content.split("@")
+            if (parts.size == 2) {
+                host = parts[0]
+                auth = parts[1]
+            }
+        }
+
         for (i in 0 until store.zivpnCoreCount) {
             val port = 1080 + i
             val json = JSONObject().apply {
-                put("server", "${store.zivpnServerHost}:$serverPorts")
+                put("server", "$host:$serverPorts")
                 put("obfs", store.zivpnObfsKey)
-                put("auth", store.zivpnAuthUser)
+                put("auth", auth)
                 put("socks5", JSONObject().put("listen", "127.0.0.1:$port"))
                 put("insecure", true)
                 if (store.zivpnUpLimit != "0") put("up", store.zivpnUpLimit)

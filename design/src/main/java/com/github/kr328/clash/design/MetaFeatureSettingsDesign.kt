@@ -341,6 +341,26 @@ class MetaFeatureSettingsDesign(
                 title = R.string.zivpn_obfs_key,
             )
 
+            editableTextList(
+                value = asMutable(
+                    name = "zivpnAccounts",
+                    get = { store.zivpnAccounts },
+                    set = { store.zivpnAccounts = it ?: emptyList() }
+                ),
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_accounts,
+            )
+
+            val accounts = store.zivpnAccounts
+            if (accounts.isNotEmpty()) {
+                selectableList(
+                    value = store::zivpnSelectedAccount,
+                    values = Array(accounts.size) { it },
+                    valuesText = accounts,
+                    title = R.string.zivpn_selected_account,
+                )
+            }
+
             val coreCounts = Array(10) { it + 1 }
             selectableList(
                 value = store::zivpnCoreCount,

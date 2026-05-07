@@ -110,4 +110,13 @@ class ServiceStore(context: Context) {
         key = "zivpn_recv_win",
         defaultValue = 4194304
     )
+
+    var zivpnAccounts: List<String>
+        get() = store.provider.getString("zivpn_accounts", "")?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
+        set(value) { store.provider.setString("zivpn_accounts", value.joinToString("\n")) }
+
+    var zivpnSelectedAccount: Int by store.int(
+        key = "zivpn_selected_account",
+        defaultValue = 0
+    )
 }

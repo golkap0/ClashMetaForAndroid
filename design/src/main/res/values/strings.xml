@@ -370,4 +370,6 @@
     <string name="zivpn_recv_win">Recv Window</string>
     <string name="import_zivpn_account">Import ZIVPN Account</string>
     <string name="export_zivpn_account">Export ZIVPN Account</string>
+    <string name="zivpn_accounts">ZIVPN Accounts</string>
+    <string name="zivpn_selected_account">Selected Account</string>
 </resources>

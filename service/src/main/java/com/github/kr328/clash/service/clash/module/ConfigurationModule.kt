@@ -44,20 +44,19 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
             }
 
             try {
-                val current = store.activeProfile
-                    ?: throw NullPointerException("No profile selected")
-
-                if (current == loaded && changed != null && changed != loaded)
-                    continue
-
-                loaded = current
-
-                val active = ImportedDao().queryByUUID(current)
-                    ?: throw NullPointerException("No profile selected")
-
-                Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
-
+                val zivpnUUID = UUID(0, 0)
                 if (store.zivpnEnabled) {
+                    if (loaded == zivpnUUID && changed == null)
+                        continue
+
+                    loaded = zivpnUUID
+
+                    val configDir = service.cacheDir.resolve("zivpn").apply { mkdirs() }
+                    val configFile = configDir.resolve("config.yaml")
+                    configFile.writeText("proxies: [{name: \"ZIVPN-Core\", type: socks5, server: \"127.0.0.1\", port: 7777}]\nproxy-groups: [{name: PROXY, type: select, proxies: [\"ZIVPN-Core\"]}]\nrules: [\"MATCH,PROXY\"]")
+
+                    Clash.load(configDir).await()
+
                     val zivpnOverride = com.github.kr328.clash.core.model.ConfigurationOverride().apply {
                         mixedPort = 7890
                         allowLan = false
@@ -76,26 +75,30 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                             fallbackFilter.geoIp = false
                             fallbackFilter.ipcidr = listOf("240.0.0.0/4")
                         }
-                        proxies = listOf(
-                            mapOf(
-                                "name" to "ZIVPN-Core",
-                                "type" to "socks5",
-                                "server" to "127.0.0.1",
-                                "port" to "7777",
-                                "udp" to "false"
-                            )
-                        )
-                        proxyGroups = listOf(
-                            mapOf(
-                                "name" to "PROXY",
-                                "type" to "select",
-                                "proxies" to listOf("ZIVPN-Core")
-                            )
-                        )
-                        rules = listOf("MATCH,PROXY")
                     }
                     Clash.patchOverride(Clash.OverrideSlot.Session, zivpnOverride)
+
+                    StatusProvider.currentProfile = "ZIVPN"
+
+                    service.sendProfileLoaded(zivpnUUID)
+
+                    Log.d("ZIVPN Profile loaded")
+
+                    continue
                 }
+
+                val current = store.activeProfile
+                    ?: throw NullPointerException("No profile selected")
+
+                if (current == loaded && changed != null && changed != loaded)
+                    continue
+
+                loaded = current
+
+                val active = ImportedDao().queryByUUID(current)
+                    ?: throw NullPointerException("No profile selected")
+
+                Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
 
                 val remove = SelectionDao().querySelections(active.uuid)
                     .filterNot { Clash.patchSelector(it.proxy, it.selected) }

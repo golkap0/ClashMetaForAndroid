@@ -108,9 +108,11 @@ class MainActivity : BaseActivity<MainDesign>() {
     }
 
     private suspend fun MainDesign.startClash() {
+        val store = com.github.kr328.clash.service.store.ServiceStore(this@MainActivity)
+
         val active = withProfile { queryActive() }
 
-        if (active == null || !active.imported) {
+        if (!store.zivpnEnabled && (active == null || !active.imported)) {
             showToast(R.string.no_profile_selected, ToastDuration.Long) {
                 setAction(R.string.profiles) {
                     startActivity(ProfilesActivity::class.intent)
