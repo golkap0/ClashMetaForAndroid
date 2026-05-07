@@ -357,4 +357,17 @@
     <string name="shortcut_start_long">Start Clash service</string>
     <string name="shortcut_stop_short">Stop Clash</string>
     <string name="shortcut_stop_long">Stop Clash service</string>
+
+    <string name="zivpn_settings">ZIVPN Settings</string>
+    <string name="zivpn_enabled">ZIVPN Enabled</string>
+    <string name="zivpn_auth_user">Auth User</string>
+    <string name="zivpn_server_host">Server Host</string>
+    <string name="zivpn_obfs_key">OBFS Key</string>
+    <string name="zivpn_core_count">Core Count</string>
+    <string name="zivpn_up_limit">Upload Limit</string>
+    <string name="zivpn_down_limit">Download Limit</string>
+    <string name="zivpn_recv_win_conn">Recv Window Connection</string>
+    <string name="zivpn_recv_win">Recv Window</string>
+    <string name="import_zivpn_account">Import ZIVPN Account</string>
+    <string name="export_zivpn_account">Export ZIVPN Account</string>
 </resources>

@@ -57,6 +57,46 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
 
                 Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
 
+                if (store.zivpnEnabled) {
+                    val zivpnOverride = com.github.kr328.clash.core.model.ConfigurationOverride().apply {
+                        mixedPort = 7890
+                        allowLan = false
+                        mode = com.github.kr328.clash.core.model.TunnelState.Mode.Rule
+                        logLevel = com.github.kr328.clash.core.model.LogMessage.Level.Silent
+                        externalController = "127.0.0.1:9090"
+                        ipv6 = false
+                        geodataMode = true
+                        dns.apply {
+                            enable = true
+                            ipv6 = false
+                            listen = "0.0.0.0:1053"
+                            enhancedMode = com.github.kr328.clash.core.model.ConfigurationOverride.DnsEnhancedMode.FakeIp
+                            nameServer = listOf("https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query")
+                            fallback = listOf("https://1.0.0.1/dns-query", "https://8.8.4.4/dns-query")
+                            fallbackFilter.geoIp = false
+                            fallbackFilter.ipcidr = listOf("240.0.0.0/4")
+                        }
+                        proxies = listOf(
+                            mapOf(
+                                "name" to "ZIVPN-Core",
+                                "type" to "socks5",
+                                "server" to "127.0.0.1",
+                                "port" to "7777",
+                                "udp" to "false"
+                            )
+                        )
+                        proxyGroups = listOf(
+                            mapOf(
+                                "name" to "PROXY",
+                                "type" to "select",
+                                "proxies" to listOf("ZIVPN-Core")
+                            )
+                        )
+                        rules = listOf("MATCH,PROXY")
+                    }
+                    Clash.patchOverride(Clash.OverrideSlot.Session, zivpnOverride)
+                }
+
                 val remove = SelectionDao().querySelections(active.uuid)
                     .filterNot { Clash.patchSelector(it.proxy, it.selected) }
                     .map { it.proxy }

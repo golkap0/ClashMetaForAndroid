@@ -21,8 +21,12 @@ class ClashService : BaseService() {
 
     private var reason: String? = null
 
+    private val zivpn = ZivpnManager(this)
+
     private val runtime = clashRuntime {
         val store = ServiceStore(self)
+
+        zivpn.start()
 
         val close = install(CloseModule(self))
         val config = install(ConfigurationModule(self))
@@ -96,6 +100,8 @@ class ClashService : BaseService() {
         sendClashStopped(reason)
 
         cancelAndJoinBlocking()
+
+        zivpn.stop()
 
         Log.i("ClashService destroyed: ${reason ?: "successfully"}")
 
