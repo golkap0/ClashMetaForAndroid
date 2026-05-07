@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.*
@@ -51,15 +52,20 @@ object ProfileProcessor {
                 val force = snapshot.type != Profile.Type.File
                 var cb = callback
 
-                Clash.fetchAndValid(context.processingDir, snapshot.source, force) {
-                    try {
-                        cb?.updateStatus(it)
-                    } catch (e: Exception) {
-                        cb = null
+                if (snapshot.source.contains("zivpn://", true)) {
+                    writeZivpnConfig(context.processingDir, snapshot.source)
+                } else {
+                    Clash.fetchAndValid(context.processingDir, snapshot.source, force) {
+                        try {
+                            cb?.updateStatus(it)
+                        } catch (e: Exception) {
+                            cb = null
 
-                        Log.w("Report fetch status: $e", e)
+                            Log.w("Report fetch status: $e", e)
+                        }
                     }
-                }.await()
+                        .await()
+                }
 
                 profileLock.withLock {
                     if (PendingDao().queryByUUID(snapshot.uuid) == snapshot) {
@@ -179,15 +185,20 @@ object ProfileProcessor {
 
                 var cb = callback
 
-                Clash.fetchAndValid(context.processingDir, snapshot.source, true) {
-                    try {
-                        cb?.updateStatus(it)
-                    } catch (e: Exception) {
-                        cb = null
+                if (snapshot.source.contains("zivpn://", true)) {
+                    writeZivpnConfig(context.processingDir, snapshot.source)
+                } else {
+                    Clash.fetchAndValid(context.processingDir, snapshot.source, true) {
+                        try {
+                            cb?.updateStatus(it)
+                        } catch (e: Exception) {
+                            cb = null
 
-                        Log.w("Report fetch status: $e", e)
+                            Log.w("Report fetch status: $e", e)
+                        }
                     }
-                }.await()
+                        .await()
+                }
 
                 profileLock.withLock {
                     if (ImportedDao().exists(snapshot.uuid)) {
@@ -253,11 +264,64 @@ object ProfileProcessor {
             source.isEmpty() && type != Profile.Type.File ->
                 throw IllegalArgumentException("Invalid url")
 
-            source.isNotEmpty() && scheme != "https" && scheme != "http" && scheme != "content" ->
+            source.isNotEmpty() && scheme != "https" && scheme != "http" && scheme != "content" && scheme != "zivpn" ->
                 throw IllegalArgumentException("Unsupported url $source")
 
             interval != 0L && TimeUnit.MILLISECONDS.toMinutes(interval) < 15 ->
                 throw IllegalArgumentException("Invalid interval")
         }
+    }
+
+    private fun writeZivpnConfig(output: File, source: String) {
+        val entries = source.split("\n", " ", "\t", ",").map { it.trim() }
+            .filter { it.startsWith("zivpn://", true) }
+        if (entries.isEmpty()) throw IllegalArgumentException("Invalid zivpn url")
+
+        val proxyYaml = """
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: disable
+external-controller: 127.0.0.1:9090
+ipv6: false
+geo-auto-update: false
+geodata-mode: true
+
+dns:
+  enable: true
+  ipv6: false
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - https://1.0.0.1/dns-query
+    - https://8.8.4.4/dns-query
+  fallback-filter:
+    geoip: false
+    ipcidr:
+      - 240.0.0.0/4
+
+proxies:
+  - name: "ZIVPN-Core"
+    type: socks5
+    server: 127.0.0.1
+    port: 7777
+    udp: false
+
+proxy-groups:
+  - name: "PROXY"
+    type: select
+    proxies:
+      - "ZIVPN-Core"
+
+rules:
+  - MATCH,PROXY
+""".trimIndent()
+
+        output.resolve("config.yaml").writeText(proxyYaml)
+        output.resolve("zivpn_accounts.txt").writeText(entries.joinToString("\n"))
     }
 }
