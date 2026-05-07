@@ -6,7 +6,9 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.core.Clash
+import com.github.kr328.clash.core.model.ConfigurationOverride
 import com.github.kr328.clash.design.MetaFeatureSettingsDesign
+import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.clashDir
 import com.github.kr328.clash.util.withClash
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -17,11 +19,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import com.github.kr328.clash.design.R
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import com.github.kr328.clash.design.dialog.requestModelTextInput
 
 
 class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
     override suspend fun main() {
         val configuration = withClash { queryOverride(Clash.OverrideSlot.Persist) }
+        val store = ServiceStore(this)
 
         defer {
             withClash {
@@ -31,7 +38,8 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
 
         val design = MetaFeatureSettingsDesign(
             this,
-            configuration
+            configuration,
+            store
         )
 
         setContentDesign(design)
@@ -77,10 +85,61 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
                                 "*/*")
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportASN)
                         }
+                        MetaFeatureSettingsDesign.Request.ImportZivpnAccount -> {
+                            importZivpnAccount(store)
+                        }
+                        MetaFeatureSettingsDesign.Request.ExportZivpnAccount -> {
+                            exportZivpnAccount(store)
+                        }
                     }
                 }
             }
         }
+    }
+
+    private suspend fun importZivpnAccount(store: ServiceStore) {
+        val input = requestModelTextInput(
+            initial = "",
+            title = getString(R.string.import_zivpn_account),
+        )
+
+        if (!input.isNullOrBlank()) {
+            val lines = input.split("\n")
+                .map { it.trim() }
+                .filter { it.startsWith("zivpn://") }
+
+            val current = store.zivpnAccounts.toMutableList()
+            var count = 0
+            lines.forEach { line ->
+                val content = line.substringAfter("zivpn://")
+                val parts = content.split("@")
+                if (parts.size == 2) {
+                    if (!current.contains(line)) {
+                        current.add(line)
+                    }
+                    store.zivpnServerHost = parts[0]
+                    store.zivpnAuthUser = parts[1]
+                    count++
+                }
+            }
+            store.zivpnAccounts = current
+
+            if (count > 0) {
+                Toast.makeText(this, "Imported $count accounts", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun exportZivpnAccount(store: ServiceStore) {
+        val server = store.zivpnServerHost
+        val auth = store.zivpnAuthUser
+        val uri = "zivpn://$server@$auth"
+
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("ZIVPN Account", uri)
+        clipboard.setPrimaryClip(clip)
+
+        Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show()
     }
 
     private val validDatabaseExtensions = listOf(

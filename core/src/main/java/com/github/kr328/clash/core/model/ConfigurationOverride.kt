@@ -5,6 +5,7 @@ import android.os.Parcelable
 import com.github.kr328.clash.core.util.Parcelizer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class ConfigurationOverride(
@@ -79,6 +80,7 @@ data class ConfigurationOverride(
 
     @SerialName("geox-url")
     val geoxurl: GeoXUrl = GeoXUrl(),
+
 ) : Parcelable {
     @Serializable
     data class Dns(
@@ -140,7 +142,34 @@ data class ConfigurationOverride(
     @Serializable
     data class App(
         @SerialName("append-system-dns")
-        var appendSystemDns: Boolean? = null
+        var appendSystemDns: Boolean? = null,
+
+        @SerialName("zivpn-enabled")
+        var zivpnEnabled: Boolean? = null,
+
+        @SerialName("zivpn-auth-user")
+        var zivpnAuthUser: String? = null,
+
+        @SerialName("zivpn-server-host")
+        var zivpnServerHost: String? = null,
+
+        @SerialName("zivpn-obfs-key")
+        var zivpnObfsKey: String? = null,
+
+        @SerialName("zivpn-core-count")
+        var zivpnCoreCount: Int? = null,
+
+        @SerialName("zivpn-up-limit")
+        var zivpnUpLimit: String? = null,
+
+        @SerialName("zivpn-down-limit")
+        var zivpnDownLimit: String? = null,
+
+        @SerialName("zivpn-recv-win-conn")
+        var zivpnRecvWinConn: Int? = null,
+
+        @SerialName("zivpn-recv-win")
+        var zivpnRecvWin: Int? = null,
     )
 
     @Serializable

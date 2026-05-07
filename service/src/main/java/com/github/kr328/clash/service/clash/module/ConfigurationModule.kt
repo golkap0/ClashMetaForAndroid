@@ -44,6 +44,49 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
             }
 
             try {
+                val zivpnUUID = UUID(0, 0)
+                if (store.zivpnEnabled) {
+                    if (loaded == zivpnUUID && changed == null)
+                        continue
+
+                    loaded = zivpnUUID
+
+                    val configDir = service.cacheDir.resolve("zivpn").apply { mkdirs() }
+                    val configFile = configDir.resolve("config.yaml")
+                    configFile.writeText("proxies: [{name: \"ZIVPN-Core\", type: socks5, server: \"127.0.0.1\", port: 7777}]\nproxy-groups: [{name: PROXY, type: select, proxies: [\"ZIVPN-Core\"]}]\nrules: [\"MATCH,PROXY\"]")
+
+                    Clash.load(configDir).await()
+
+                    val zivpnOverride = com.github.kr328.clash.core.model.ConfigurationOverride().apply {
+                        mixedPort = 7890
+                        allowLan = false
+                        mode = com.github.kr328.clash.core.model.TunnelState.Mode.Rule
+                        logLevel = com.github.kr328.clash.core.model.LogMessage.Level.Silent
+                        externalController = "127.0.0.1:9090"
+                        ipv6 = false
+                        geodataMode = true
+                        dns.apply {
+                            enable = true
+                            ipv6 = false
+                            listen = "0.0.0.0:1053"
+                            enhancedMode = com.github.kr328.clash.core.model.ConfigurationOverride.DnsEnhancedMode.FakeIp
+                            nameServer = listOf("https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query")
+                            fallback = listOf("https://1.0.0.1/dns-query", "https://8.8.4.4/dns-query")
+                            fallbackFilter.geoIp = false
+                            fallbackFilter.ipcidr = listOf("240.0.0.0/4")
+                        }
+                    }
+                    Clash.patchOverride(Clash.OverrideSlot.Session, zivpnOverride)
+
+                    StatusProvider.currentProfile = "ZIVPN"
+
+                    service.sendProfileLoaded(zivpnUUID)
+
+                    Log.d("ZIVPN Profile loaded")
+
+                    continue
+                }
+
                 val current = store.activeProfile
                     ?: throw NullPointerException("No profile selected")
 

@@ -6,16 +6,19 @@ import com.github.kr328.clash.core.model.ConfigurationOverride
 import com.github.kr328.clash.design.databinding.DesignSettingsMetaFeatureBinding
 import com.github.kr328.clash.design.preference.*
 import com.github.kr328.clash.design.util.*
+import com.github.kr328.clash.service.store.ServiceStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 class MetaFeatureSettingsDesign(
     context: Context,
-    configuration: ConfigurationOverride
+    configuration: ConfigurationOverride,
+    store: ServiceStore
 ) : Design<MetaFeatureSettingsDesign.Request>(context) {
     enum class Request {
-        ResetOverride, ImportGeoIp, ImportGeoSite, ImportCountry, ImportASN
+        ResetOverride, ImportGeoIp, ImportGeoSite, ImportCountry, ImportASN,
+        ImportZivpnAccount, ExportZivpnAccount
     }
 
     private val binding = DesignSettingsMetaFeatureBinding
@@ -310,6 +313,105 @@ class MetaFeatureSettingsDesign(
             ){
                 clicked {
                     requests.trySend(Request.ImportASN)
+                }
+            }
+
+            category(R.string.zivpn_settings)
+
+            switch(
+                value = store::zivpnEnabled,
+                title = R.string.zivpn_enabled,
+            )
+
+            editableText(
+                value = store::zivpnAuthUser,
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_auth_user,
+            )
+
+            editableText(
+                value = store::zivpnServerHost,
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_server_host,
+            )
+
+            editableText(
+                value = store::zivpnObfsKey,
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_obfs_key,
+            )
+
+            editableTextList(
+                value = asMutable(
+                    name = "zivpnAccounts",
+                    get = { store.zivpnAccounts },
+                    set = { store.zivpnAccounts = it ?: emptyList() }
+                ),
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_accounts,
+            )
+
+            val accounts = store.zivpnAccounts
+            if (accounts.isNotEmpty()) {
+                selectableList(
+                    value = store::zivpnSelectedAccount,
+                    values = Array(accounts.size) { it },
+                    valuesText = accounts,
+                    title = R.string.zivpn_selected_account,
+                )
+            }
+
+            val coreCounts = Array(10) { it + 1 }
+            selectableList(
+                value = store::zivpnCoreCount,
+                values = coreCounts,
+                valuesText = coreCounts.map { it.toString() },
+                title = R.string.zivpn_core_count,
+            )
+
+            editableText(
+                value = store::zivpnUpLimit,
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_up_limit,
+            )
+
+            editableText(
+                value = store::zivpnDownLimit,
+                adapter = TextAdapter.String,
+                title = R.string.zivpn_down_limit,
+            )
+
+            editableText(
+                value = store::zivpnRecvWinConn,
+                adapter = object : TextAdapter<Int> {
+                    override fun from(value: Int): String = value.toString()
+                    override fun to(text: String): Int = text.toIntOrNull() ?: 0
+                },
+                title = R.string.zivpn_recv_win_conn,
+            )
+
+            editableText(
+                value = store::zivpnRecvWin,
+                adapter = object : TextAdapter<Int> {
+                    override fun from(value: Int): String = value.toString()
+                    override fun to(text: String): Int = text.toIntOrNull() ?: 0
+                },
+                title = R.string.zivpn_recv_win,
+            )
+
+            clickable(
+                title = R.string.import_zivpn_account,
+            ) {
+                clicked {
+                    requests.trySend(Request.ImportZivpnAccount)
+                }
+            }
+
+            clickable(
+                title = R.string.export_zivpn_account,
+            ) {
+                clicked {
+                    requests.trySend(Request.ExportZivpnAccount)
                 }
             }
         }
